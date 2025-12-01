@@ -56,17 +56,13 @@ jobs:
         run: |
           dvc push
 
-      - name: Commit metrics
+      - name: Commit and push metrics
         if: github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add -f metrics/*.json || true
-          git diff --staged --quiet || git commit -m "Update metrics [skip ci]"
-
-      - name: Push changes
-        if: github.ref == 'refs/heads/main'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          if ! git diff --staged --quiet; then
+            git commit -m "Update metrics [skip ci]"
+            git push
+          fi
