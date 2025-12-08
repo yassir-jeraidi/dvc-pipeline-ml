@@ -1,0 +1,96 @@
+name: MLOps Pipeline with DVC and CML
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  mlops-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for DVC
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🔧 Configure AWS credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-west-3
+        run: |
+          echo "AWS credentials configured"
+          aws --version || echo "AWS CLI not installed, but boto3 should handle S3 access"
+
+      - name: 📥 DVC Pull - Download data and models from S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-west-3
+        run: |
+          dvc pull || echo "⚠️  DVC pull failed or no remote data available yet"
+
+      - name: 🔄 DVC Reproduce - Run ML pipeline
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-west-3
+        run: |
+          dvc repro
+
+      - name: 📤 DVC Push - Upload artifacts to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-west-3
+        run: |
+          dvc push
+
+      - name: 📊 Generate CML Report
+        run: |
+          python scripts/generate_cml_report.py
+
+      - name: 📝 Publish CML Report
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Read the generated report
+          cat reports/cml_report.md >> report.md
+
+          # Use CML to publish the report as a comment
+          cml comment create report.md
+
+      - name: 📋 Display Metrics Summary
+        run: |
+          echo "=== Training Metrics ==="
+          cat metrics/train_metrics.json
+          echo ""
+          echo "=== Evaluation Metrics ==="
+          cat metrics/eval_metrics.json
+
+      - name: ✅ Pipeline completed successfully
+        run: |
+          echo "🎉 MLOps pipeline executed successfully!"
+          echo "📊 Metrics have been generated and stored"
+          echo "📦 Artifacts have been pushed to S3 remote storage"

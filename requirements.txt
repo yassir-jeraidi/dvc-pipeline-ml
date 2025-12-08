@@ -2,4 +2,7 @@ pandas
 scikit-learn
 pyyaml
 joblib
-dvc
+dvc[s3]
+cml
+boto3
+requests
