@@ -4,6 +4,6 @@ scikit-learn>=1.2.0
 pyyaml>=6.0
 joblib>=1.2.0
 dvc[s3]>=3.0.0
-cml>=0.20.0
+cml
 boto3>=1.26.0
 requests>=2.28.0
