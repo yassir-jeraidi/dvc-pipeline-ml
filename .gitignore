@@ -1,8 +1,40 @@
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+ENV/
 
+# Data and models (tracked by DVC)
 data/*.csv
 models/
 reports/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# AWS Credentials - NEVER COMMIT
+*accessKeys*
+*.csv
+.aws/
+credentials
+.env
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker_output/
+
+# Temporary files
+*.log
+*.tmp
